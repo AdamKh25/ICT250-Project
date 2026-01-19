@@ -1,16 +1,16 @@
-﻿from validation import SYMBOLS
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def encrypt(text: str, key: int) -> str:
+    text = text.upper()
     key %= 26
-    out = []
+    result = ''
     for ch in text:
-        if 'A' <= ch <= 'Z':
-            out.append(chr((ord(ch) - 65 + key) % 26 + 65))
-        elif 'a' <= ch <= 'z':
-            out.append(chr((ord(ch) - 97 + key) % 26 + 97))
+        if ch in LETTERS:
+            idx = LETTERS.find(ch)
+            result += LETTERS[(idx + key) % 26]
         else:
-            out.append(ch if ch in SYMBOLS else ch)
-    return ''.join(out)
+            result += ch
+    return result
 
 def decrypt(text: str, key: int) -> str:
     return encrypt(text, -key)
