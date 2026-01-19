@@ -16,4 +16,4 @@ def mod_inverse(a: int, m: int = 26) -> int:
     from math import gcd
     if gcd(a, m) != 1:
         raise ValueError("a must be coprime with 26")
-    return pow(a
+    return pow(a)
