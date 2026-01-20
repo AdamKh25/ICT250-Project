@@ -1,19 +1,35 @@
-SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 !?.'
+SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 !?."
 
-def require_text(name: str, s: str) -> str:
-    if not isinstance(s, str) or not s.strip():
-        raise ValueError(f"{name} must be non-empty string")
-    return s.strip()
+def require_text(x: str) -> str:
+    if not isinstance(x, str) or x == "":
+        raise ValueError("Text must be a non-empty string.")
+    return x
 
-def require_int(name: str, v: int, min_v: int = 0) -> int:
-    if not isinstance(v, int):
-        raise ValueError(f"{name} must be int >= {min_v}")
-    if v < min_v:
-        raise ValueError(f"{name} must be >= {min_v}")
-    return v
+def require_int(x) -> int:
+    try:
+        return int(x)
+    except Exception:
+        raise ValueError("Expected an integer.")
 
-def mod_inverse(a: int, m: int = 26) -> int:
-    from math import gcd
+def gcd(a: int, b: int) -> int:
+    while b:
+        a, b = b, a % b
+    return abs(a)
+
+def mod_inverse(a: int, m: int) -> int | None:
+    a %= m
     if gcd(a, m) != 1:
-        raise ValueError("a must be coprime with 26")
-    return pow(a)
+        return None
+    t, nt = 0, 1
+    r, nr = m, a
+    while nr:
+        q = r // nr
+        t, nt = nt, t - q * nt
+        r, nr = nr, r - q * nr
+    return t % m
+
+def is_valid_affine_a(a: int) -> bool:
+    return gcd(a, 26) == 1
+
+def make_affine_key(a: int, b: int) -> int:
+    return a * 26 + (b % 26)
