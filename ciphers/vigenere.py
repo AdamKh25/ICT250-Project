@@ -1,31 +1,29 @@
-LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+from validation import SYMBOLS
 
 def encrypt(text: str, key: str) -> str:
-    text = text.upper()
     key = key.upper()
-    result = ''
-    j = 0  # index in key for letters only
+    j = 0
+    out = []
     for ch in text:
-        if ch in LETTERS:
-            k = LETTERS.find(key[j % len(key)])
-            p = LETTERS.find(ch)
-            result += LETTERS[(p + k) % 26]
+        if ch.isalpha():
+            k = ord(key[j % len(key)]) - 65
             j += 1
+            base = 65 if ch.isupper() else 97
+            out.append(chr((ord(ch) - base + k) % 26 + base))
         else:
-            result += ch
-    return result
+            out.append(ch if ch in SYMBOLS else ch)
+    return ''.join(out)
 
 def decrypt(text: str, key: str) -> str:
-    text = text.upper()
     key = key.upper()
-    result = ''
     j = 0
+    out = []
     for ch in text:
-        if ch in LETTERS:
-            k = LETTERS.find(key[j % len(key)])
-            c = LETTERS.find(ch)
-            result += LETTERS[(c - k) % 26]
+        if ch.isalpha():
+            k = ord(key[j % len(key)]) - 65
             j += 1
+            base = 65 if ch.isupper() else 97
+            out.append(chr((ord(ch) - base - k) % 26 + base))
         else:
-            result += ch
-    return result
+            out.append(ch if ch in SYMBOLS else ch)
+    return ''.join(out)
