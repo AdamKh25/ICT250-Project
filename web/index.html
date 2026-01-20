@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Secure Notes Vault — Crypto UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; }
+    body { margin: 24px; max-width: 900px; }
+    h1 { margin-bottom: 8px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 16px 0; }
+    label { display:block; margin: 8px 0 4px; font-weight:600; }
+    input, select, textarea, button { font-size: 14px; padding: 8px; }
+    textarea { width: 100%; min-height: 120px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 220px; }
+    .muted { color:#666; font-size:12px; }
+    pre { background:#f8f8f8; padding:12px; border-radius:8px; overflow:auto; }
+    .keygrid { display:grid; grid-template-columns: repeat(4,minmax(120px,1fr)); gap:8px; }
+    .keygrid > div { display:flex; flex-direction:column; }
+  </style>
+</head>
+<body>
+  <h1>Secure Notes Vault — Crypto UI</h1>
+  <div class="muted">Backend must be running at <code>http://127.0.0.1:5000</code></div>
+
+  <!-- Encrypt / Decrypt -->
+  <div class="card">
+    <h2>Encrypt / Decrypt</h2>
+
+    <div class="row">
+      <div>
+        <label for="cipher">Cipher</label>
+        <select id="cipher">
+          <option>Caesar</option>
+          <option>Vigenere</option>
+          <option>Affine</option>
+          <option>Transposition</option>
+        </select>
+      </div>
+
+      <div id="key-int-wrap">
+        <label for="key-int">Key (int)</label>
+        <input id="key-int" type="number" value="3" />
+      </div>
+
+      <div id="key-word-wrap" style="display:none">
+        <label for="key-word">Keyword</label>
+        <input id="key-word" placeholder="LEMON" />
+      </div>
+
+      <div id="key-a-wrap" style="display:none">
+        <label for="key-a">a (coprime with 26)</label>
+        <input id="key-a" type="number" value="5" />
+      </div>
+      <div id="key-b-wrap" style="display:none">
+        <label for="key-b">b (0..25)</label>
+        <input id="key-b" type="number" value="8" />
+      </div>
+    </div>
+
+    <label for="input">Input</label>
+    <textarea id="input" placeholder="Type plaintext or ciphertext here...">Hello, World!</textarea>
+
+    <div class="row">
+      <button id="btn-encrypt">Encrypt</button>
+      <button id="btn-decrypt">Decrypt</button>
+    </div>
+
+    <label>Result</label>
+    <pre id="out">—</pre>
+  </div>
+
+  <!-- Hack -->
+  <div class="card">
+    <h2>Hack (Bruteforce)</h2>
+
+    <div class="row">
+      <div>
+        <label for="hack-cipher">Cipher</label>
+        <select id="hack-cipher">
+          <option>Caesar</option>
+          <option>Affine</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="hack-input">Ciphertext</label>
+    <textarea id="hack-input" placeholder="KHOOR ZRUOG">KHOOR ZRUOG</textarea>
+
+    <div class="row">
+      <button id="btn-hack">Run Hack</button>
+    </div>
+
+    <label>Result</label>
+    <pre id="hack-out">—</pre>
+  </div>
+
+<script>
+const API = "http://127.0.0.1:5000";
+const $ = (sel) => document.querySelector(sel);
+
+function showKeyFields() {
+  const c = $("#cipher").value;
+  $("#key-int-wrap").style.display  = (c === "Caesar" || c === "Transposition") ? "" : "none";
+  $("#key-word-wrap").style.display = (c === "Vigenere") ? "" : "none";
+  $("#key-a-wrap").style.display    = (c === "Affine") ? "" : "none";
+  $("#key-b-wrap").style.display    = (c === "Affine") ? "" : "none";
+}
+$("#cipher").addEventListener("change", showKeyFields);
+showKeyFields();
+
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  const j = await r.json();
+  return j;
+}
+
+function out(el, obj) {
+  el.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+}
+
+$("#btn-encrypt").addEventListener("click", async () => {
+  const c = $("#cipher").value;
+  const text = $("#input").value;
+  let payload = { cipher: c.toLowerCase(), text, params: {} };
+
+  if (c === "Caesar" || c === "Transposition") {
+    payload.params.key = parseInt($("#key-int").value || "0", 10);
+  } else if (c === "Vigenere") {
+    payload.params.key = $("#key-word").value.trim();
+  } else if (c === "Affine") {
+    payload.params.a = parseInt($("#key-a").value || "0", 10);
+    payload.params.b = parseInt($("#key-b").value || "0", 10);
+  }
+
+  try {
+    const j = await post(API + "/api/encrypt", payload);
+    out($("#out"), j.ok ? j.ciphertext : j);
+  } catch (e) {
+    out($("#out"), String(e));
+  }
+});
+
+$("#btn-decrypt").addEventListener("click", async () => {
+  const c = $("#cipher").value;
+  const text = $("#input").value;
+  let payload = { cipher: c.toLowerCase(), text, params: {} };
+
+  if (c === "Caesar" || c === "Transposition") {
+    payload.params.key = parseInt($("#key-int").value || "0", 10);
+  } else if (c === "Vigenere") {
+    payload.params.key = $("#key-word").value.trim();
+  } else if (c === "Affine") {
+    payload.params.a = parseInt($("#key-a").value || "0", 10);
+    payload.params.b = parseInt($("#key-b").value || "0", 10);
+  }
+
+  try {
+    const j = await post(API + "/api/decrypt", payload);
+    out($("#out"), j.ok ? j.plaintext : j);
+  } catch (e) {
+    out($("#out"), String(e));
+  }
+});
+
+$("#btn-hack").addEventListener("click", async () => {
+  const c = $("#hack-cipher").value.toLowerCase();
+  const ciphertext = $("#hack-input").value;
+
+  try {
+    const j = await post(API + "/api/hack", { cipher: c, ciphertext });
+    out($("#hack-out"), j);
+  } catch (e) {
+    out($("#hack-out"), String(e));
+  }
+});
+</script>
+</body>
+</html>
