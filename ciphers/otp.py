@@ -1,23 +1,54 @@
-from validation import require_text
 import secrets
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-def text_to_bytes(text):
-    return ''.join(c for c in text if c in SYMBOLS).encode()
+def onlyLettersUp(s): 
+    return ''.join(ch for ch in s.upper() if ch in LETTERS)
 
-def encrypt(text: str, key: bytes = None) -> tuple[str, bytes]:
-    ptb = text_to_bytes(text)
+def makeRandomKeyFor(message):
+    # random letters only for the letters in message
+    L = sum(1 for ch in message if ch.upper() in LETTERS)
+    return ''.join(secrets.choice(LETTERS) for _ in range(L))
+
+def _shift(ch, k, enc=True):
+    a = LETTERS.find(ch.upper())
+    b = LETTERS.find(k)
+    n = (a + b) % 26 if enc else (a - b) % 26
+    out = LETTERS[n]
+    return out if ch.isupper() else out.lower()
+
+def encryptMessage(message, key):
+    key = onlyLettersUp(key)
+    out, i = [], 0
+    for ch in message:
+        if ch.upper() in LETTERS:
+            out.append(_shift(ch, key[i], True))
+            i += 1
+        else:
+            out.append(ch)
+    return ''.join(out)
+
+def decryptMessage(message, key):
+    key = onlyLettersUp(key)
+    out, i = [], 0
+    for ch in message:
+        if ch.upper() in LETTERS:
+            out.append(_shift(ch, key[i], False))
+            i += 1
+        else:
+            out.append(ch)
+    return ''.join(out)
+
+# project adapters (encrypt returns (cipher, key) if key missing)
+def generate_key(length): 
+    return ''.join(secrets.choice(LETTERS) for _ in range(length))
+
+def encrypt(text, key=None):
     if key is None:
-        key = secrets.token_bytes(len(ptb))
-    elif len(key) != len(ptb):
-        raise ValueError("key len == text len")
-    ctb = bytes(a^b for a,b in zip(ptb, key))
-    return ctb.decode(errors='ignore'), key
+        key = makeRandomKeyFor(text)
+    # strict: key letters count must equal text letters count
+    if sum(1 for c in text if c.upper() in LETTERS) != len(onlyLettersUp(key)):
+        raise ValueError("OTP key length must equal number of letters in message.")
+    return encryptMessage(text, key), key
 
-def decrypt(ct: str, key: bytes) -> str:
-    ctb = ct.encode(errors='ignore')
-    ptb = bytes(a^b for a,b in zip(ctb, key))
-    return ptb.decode(errors='ignore')
-
-if __name__ == "__main__":
-    ct, k = encrypt("OTPTEST")
-    print(decrypt(ct, k))
+def decrypt(ciphertext, key):
+    return decryptMessage(ciphertext, key)
