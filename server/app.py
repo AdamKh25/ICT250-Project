@@ -3,12 +3,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os, sys
 
-# Make sure we can import from project root (ciphers/, hacking/, etc.)
+# Make sure Python can see ciphers/ and hacking/
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from ciphers import caesar, vigenere, affine, transposition
+from hacking import caesar_hack, affine_hack
 
 app = Flask(__name__)
 CORS(app)
@@ -16,7 +17,7 @@ CORS(app)
 # ---------- Health ----------
 @app.get("/api/health")
 def api_health():
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "service": "crypto_toolkit"})
 
 # ---------- Encrypt ----------
 @app.post("/api/encrypt")
@@ -34,7 +35,6 @@ def api_encrypt():
             key = str(params.get("key", ""))
             ct  = vigenere.encrypt(text, key)
         elif cipher == "affine":
-            # key is the packed a*26 + b like in your class code
             key = int(params.get("key"))
             ct  = affine.encrypt(text, key)
         elif cipher == "transposition":
@@ -75,51 +75,36 @@ def api_decrypt():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
 
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
-
-# --- Hack endpoints ---
+# ---------- Hack: Caesar ----------
 @app.post("/api/hack/caesar")
 def api_hack_caesar():
     data = request.get_json(force=True)
-    ct = data.get("ciphertext", "")
-    from ciphers import caesar
+    ct = data.get("ciphertext") or data.get("text") or ""
 
-    candidates = []
-    for k in range(26):
-        pt = caesar.decrypt(ct, k)
-        candidates.append({"key": k, "plaintext": pt})
+    pt, key, candidates = caesar_hack.hack(ct)
 
-    COMMON = (" THE ", " AND ", " TO ", " OF ", " IN ", " HELLO ", " WORLD ")
-    def score(s):
-        u = s.upper()
-        return u.count(" ") + sum(u.count(w) for w in COMMON)
+    return jsonify({
+        "ok": True,
+        "plaintext": pt,
+        "key": key,
+        "candidates": candidates[:10],
+    })
 
-    best = max(candidates, key=lambda x: score(x["plaintext"]))
-    return jsonify({"ok": True, "best": best, "candidates": candidates})
+# ---------- Hack: Affine ----------
 @app.post("/api/hack/affine")
 def api_hack_affine():
     data = request.get_json(force=True)
-    ct = data.get("ciphertext", "")
-    from ciphers import affine
-    import math
+    ct = data.get("ciphertext") or data.get("text") or ""
 
-    M = 26
-    validA = [a for a in range(1, M, 2) if math.gcd(a, M) == 1]
-    candidates = []
-    for a in validA:
-        for b in range(M):
-            key = a*26 + b
-            try:
-                pt = affine.decrypt(ct, key)
-                candidates.append({"a": a, "b": b, "plaintext": pt})
-            except Exception:
-                pass
+    pt, (a, b), candidates = affine_hack.hack(ct)
 
-    COMMON = (" THE ", " AND ", " TO ", " OF ", " IN ", " HELLO ", " WORLD ", " NAME ")
-    def score(s):
-        u = s.upper()
-        return u.count(" ") + sum(u.count(w) for w in COMMON)
+    return jsonify({
+        "ok": True,
+        "plaintext": pt,
+        "a": a,
+        "b": b,
+        "candidates": candidates[:10],
+    })
 
-    best = max(candidates, key=lambda x: score(x["plaintext"])) if candidates else None
-    return jsonify({"ok": True, "best": best, "candidates": candidates})
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=5000, debug=True)
