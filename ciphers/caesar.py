@@ -1,17 +1,20 @@
-from validation import SYMBOLS
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-def encrypt(text: str, key: int) -> str:
-    key %= 26
-    out = []
-    for ch in text:
-        if 'A' <= ch <= 'Z':
-            out.append(chr((ord(ch) - 65 + key) % 26 + 65))
-        elif 'a' <= ch <= 'z':
-            out.append(chr((ord(ch) - 97 + key) % 26 + 97))
+def encryptMessage(key, message):
+    translated = []
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            num = LETTERS.find(symbol.upper())
+            num = (num + key) % 26
+            new = LETTERS[num]
+            translated.append(new if symbol.isupper() else new.lower())
         else:
-            # non-letters are left as-is (rule: keep unchanged)
-            out.append(ch if ch in SYMBOLS else ch)
-    return ''.join(out)
+            translated.append(symbol)
+    return ''.join(translated)
 
-def decrypt(text: str, key: int) -> str:
-    return encrypt(text, -key)
+def decryptMessage(key, message):
+    return encryptMessage(-key, message)
+
+# keep these names for your tests / API
+def encrypt(text, key): return encryptMessage(key, text)
+def decrypt(text, key): return decryptMessage(key, text)
