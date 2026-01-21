@@ -73,8 +73,18 @@ def api_decrypt():
             key = str(params.get("key", ""))
             pt  = vigenere.decrypt(text, key)
         elif cipher == "affine":
-            key = int(params.get("key"))
-            pt  = affine.decrypt(text, key)
+    a = params.get("a")
+    b = params.get("b")
+
+    if a is None or b is None:
+        raise ValueError("Affine cipher requires parameters 'a' and 'b'")
+
+    a = int(a)
+    b = int(b)
+
+    key = a * 26 + (b % 26)
+    pt  = affine.decrypt(text, key)
+
         elif cipher == "transposition":
             key = int(params.get("key", 8))
             pt  = transposition.decrypt(text, key)
