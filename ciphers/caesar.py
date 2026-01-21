@@ -2,15 +2,29 @@ LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def encrypt(text: str, key: int) -> str:
     text = text.upper()
-    key %= 26
     result = ''
-    for ch in text:
-        if ch in LETTERS:
-            idx = LETTERS.find(ch)
-            result += LETTERS[(idx + key) % 26]
+
+    for symbol in text:
+        if symbol in LETTERS:
+            num = LETTERS.find(symbol)
+            num = (num + key) % len(LETTERS)
+            result += LETTERS[num]
         else:
-            result += ch
+            # keep spaces, commas, etc.
+            result += symbol
+
     return result
 
 def decrypt(text: str, key: int) -> str:
-    return encrypt(text, -key)
+    text = text.upper()
+    result = ''
+
+    for symbol in text:
+        if symbol in LETTERS:
+            num = LETTERS.find(symbol)
+            num = (num - key) % len(LETTERS)
+            result += LETTERS[num]
+        else:
+            result += symbol
+
+    return result
