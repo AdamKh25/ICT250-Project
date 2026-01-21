@@ -1,61 +1,47 @@
-LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-M = 26
+# hacking/affine_hack.py
+from ciphers import affine
+import math
 
-def gcd(a, b):
-    while b:
-        a, b = b, a % b
-    return abs(a)
+COMMON_WORDS = ("THE", "AND", "TO", "OF", "IN", "IS", "IT", "HELLO", "WORLD")
 
-def modInverse(a, m):
-    a %= m
-    for x in range(1, m):
-        if (a * x) % m == 1:
-            return x
-    return None
+def score(text: str) -> int:
+    t = text.upper()
+    s = t.count(" ")
+    for w in COMMON_WORDS:
+        s += t.count(w)
+    return s
 
-def decryptAffine(ciphertext, keyA, keyB):
-    invA = modInverse(keyA, M)
-    if invA is None:
-        return None
-    translated = []
-    for symbol in ciphertext:
-        if symbol.upper() in LETTERS:
-            num = LETTERS.find(symbol.upper())
-            num = (invA * (num - keyB)) % M
-            new = LETTERS[num]
-            translated.append(new if symbol.isupper() else new.lower())
-        else:
-            translated.append(symbol)
-    return ''.join(translated)
+def hack(ciphertext: str):
+    """
+    Try all valid (a, b) for Affine over 26 letters.
+    Return:
+      best_plaintext, (best_a, best_b), candidates_list
 
-def englishScore(s):
-    s = s.upper()
-    common = [' THE ', ' AND ', ' TO ', ' OF ', ' IN ', ' IS ', ' IT ', ' YOU ']
-    return (
-        sum(s.count(w) for w in common) * 3
-        + s.count(' ')
-        + 0.02 * sum(ch.isalpha() for ch in s)
-    )
+    candidates_list is a list of dicts like:
+      {"a": a, "b": b, "plaintext": text, "score": s}
+    """
+    M = 26
+    # valid a values: 1..25, odd, gcd(a,26)==1
+    validA = [a for a in range(1, M, 2) if math.gcd(a, M) == 1]
 
-def hackAffine(ciphertext):
-    # Slide-like: try all valid keyA with gcd(keyA,26)==1 and keyB in 0..25
-    validA = [a for a in range(1, 26, 2) if gcd(a, M) == 1]
-    bestScore = float('-inf')
-    bestA, bestB = 1, 0
-    bestText = ciphertext
-    tries = []
+    best_plain = ""
+    best_a = None
+    best_b = None
+    best_score = -1
+    candidates = []
+
     for a in validA:
-        for b in range(26):
-            pt = decryptAffine(ciphertext, a, b)
-            if pt is None:
+        for b in range(M):
+            key = a * M + b  # same packing as in affine cipher code
+            try:
+                pt = affine.decrypt(ciphertext, key)
+            except Exception:
                 continue
-            score = englishScore(pt)
-            tries.append((score, (a, b), pt))
-            if score > bestScore:
-                bestScore, bestA, bestB, bestText = score, a, b, pt
-    tries.sort(reverse=True)
-    return bestText, (bestA, bestB), tries[:3]
+            s = score(pt)
+            candidates.append({"a": a, "b": b, "plaintext": pt, "score": s})
+            if s > best_score:
+                best_score = s
+                best_plain = pt
+                best_a, best_b = a, b
 
-# keep your project’s entry point name
-def hack(ciphertext):
-    return hackAffine(ciphertext)
+    return best_plain, (best_a, best_b), candidates
