@@ -1,30 +1,28 @@
 import math
 
-def encrypt(text: str, key: int) -> str:
-    rows = [text[i:i+key] for i in range(0, len(text), key)]
-    out = []
+def encryptMessage(key, message):
+    # write down the message in rows; read off column by column
+    ciphertext = [''] * key
     for col in range(key):
-        for r in rows:
-            if col < len(r):
-                out.append(r[col])
-    return ''.join(out)
+        pointer = col
+        while pointer < len(message):
+            ciphertext[col] += message[pointer]
+            pointer += key
+    return ''.join(ciphertext)
 
-def decrypt(cipher: str, key: int) -> str:
-    cols = key
-    rows = math.ceil(len(cipher) / cols)
-    shaded = cols * rows - len(cipher)  
-    col_lens = [rows] * cols
-    for i in range(shaded):
-        col_lens[cols - 1 - i] -= 1
+def decryptMessage(key, message):
+    numColumns = math.ceil(len(message) / key)
+    numRows = key
+    numShadedBoxes = (numColumns * numRows) - len(message)
+    plaintext = [''] * numColumns
+    col = row = 0
+    for symbol in message:
+        plaintext[col] += symbol
+        col += 1
+        if (col == numColumns) or (col == numColumns - 1 and row >= numRows - numShadedBoxes):
+            col = 0
+            row += 1
+    return ''.join(plaintext)
 
-    parts = []
-    idx = 0
-    for L in col_lens:
-        parts.append(cipher[idx:idx+L]); idx += L
-
-    out = []
-    for r in range(rows):
-        for c in range(cols):
-            if r < len(parts[c]):
-                out.append(parts[c][r])
-    return ''.join(out)
+def encrypt(text, key): return encryptMessage(key, text)
+def decrypt(text, key): return decryptMessage(key, text)
