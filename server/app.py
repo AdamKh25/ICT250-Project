@@ -35,8 +35,18 @@ def api_encrypt():
             key = str(params.get("key", ""))
             ct  = vigenere.encrypt(text, key)
         elif cipher == "affine":
-            key = int(params.get("key"))
-            ct  = affine.encrypt(text, key)
+    a = params.get("a")
+    b = params.get("b")
+
+    if a is None or b is None:
+        raise ValueError("Affine cipher requires parameters 'a' and 'b'")
+
+    a = int(a)
+    b = int(b)
+
+    key = a * 26 + (b % 26)
+    ct  = affine.encrypt(text, key)
+
         elif cipher == "transposition":
             key = int(params.get("key", 8))
             ct  = transposition.encrypt(text, key)
