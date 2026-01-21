@@ -1,46 +1,61 @@
-try:
-    from analysis.english_score import score_english
-except Exception:
-    def score_english(s: str) -> float:
-        ok = sum(ch.isalpha() or ch == ' ' for ch in s)
-        return ok / max(1, len(s))
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+M = 26
 
-from ciphers.affine import decrypt, _gcd
+def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return abs(a)
 
-_COMMON = {"THE","AND","TO","OF","IN","IT","IS","BE","AS","AT","SO","WE","HE",
-           "BY","OR","ON","DO","IF","ME","MY","YOU","ARE","FOR","WITH","THIS",
-           "HELLO","WORLD"}
+def modInverse(a, m):
+    a %= m
+    for x in range(1, m):
+        if (a * x) % m == 1:
+            return x
+    return None
 
-def _valid_a():
-    return [a for a in range(1, 26) if _gcd(a, 26) == 1]
+def decryptAffine(ciphertext, keyA, keyB):
+    invA = modInverse(keyA, M)
+    if invA is None:
+        return None
+    translated = []
+    for symbol in ciphertext:
+        if symbol.upper() in LETTERS:
+            num = LETTERS.find(symbol.upper())
+            num = (invA * (num - keyB)) % M
+            new = LETTERS[num]
+            translated.append(new if symbol.isupper() else new.lower())
+        else:
+            translated.append(symbol)
+    return ''.join(translated)
 
-def _rank_tuple(text: str, base_score: float):
-    T = text.upper()
-    words = [w for w in ''.join(ch if ch.isalpha() or ch==' ' else ' ' for ch in T).split() if w]
-    has_common = any(w in _COMMON for w in words)
-    space_ratio = T.count(' ') / max(1, len(T))
-    return (base_score, 1 if has_common else 0, space_ratio)
+def englishScore(s):
+    s = s.upper()
+    common = [' THE ', ' AND ', ' TO ', ' OF ', ' IN ', ' IS ', ' IT ', ' YOU ']
+    return (
+        sum(s.count(w) for w in common) * 3
+        + s.count(' ')
+        + 0.02 * sum(ch.isalpha() for ch in s)
+    )
 
-def hack(ciphertext: str, top_k: int = 5):
-    perfect = "HELLO WORLD"  # helps the smoke test
-    cands = []
-
-    for a in _valid_a():
+def hackAffine(ciphertext):
+    # Slide-like: try all valid keyA with gcd(keyA,26)==1 and keyB in 0..25
+    validA = [a for a in range(1, 26, 2) if gcd(a, M) == 1]
+    bestScore = float('-inf')
+    bestA, bestB = 1, 0
+    bestText = ciphertext
+    tries = []
+    for a in validA:
         for b in range(26):
-            key = a * 26 + b
-            try:
-                pt = decrypt(ciphertext, key)
-            except Exception:
+            pt = decryptAffine(ciphertext, a, b)
+            if pt is None:
                 continue
+            score = englishScore(pt)
+            tries.append((score, (a, b), pt))
+            if score > bestScore:
+                bestScore, bestA, bestB, bestText = score, a, b, pt
+    tries.sort(reverse=True)
+    return bestText, (bestA, bestB), tries[:3]
 
-            # Early perfect match for your test vector
-            if perfect in pt.upper():
-                return pt, (a, b), [(1.0, (a, b), pt)]
-
-            s = score_english(pt)
-            cands.append((_rank_tuple(pt, s), (a, b), pt))
-
-    cands.sort(reverse=True, key=lambda x: x[0])
-    top = [(sc[0], ab, pt) for sc, ab, pt in cands[:top_k]]
-    best = cands[0]
-    return best[2], best[1], top
+# keep your project’s entry point name
+def hack(ciphertext):
+    return hackAffine(ciphertext)
