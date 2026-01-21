@@ -1,27 +1,33 @@
-from validation import require_int
+def egcd(a,b):
+    while b: a,b = b, a%b
+    return a
 
-P, Q = 61, 53
-N = P * Q
-PHI = (P-1)*(Q-1)
-E = 17
-D = pow(E, -1, PHI)
+def modInverse(a, m):
+    a %= m
+    for x in range(1, m):
+        if (a*x) % m == 1: return x
+    return None
 
-PUBKEY = (E, N)
-PRIVKEY = (D, N)
+def makeKeys(p, q, e=65537):
+    n = p*q
+    phi = (p-1)*(q-1)
+    if egcd(e, phi) != 1:
+        # fallback tiny e
+        for cand in (3,5,17,257,65537):
+            if egcd(cand, phi) == 1:
+                e = cand; break
+    d = modInverse(e, phi)
+    if d is None: raise ValueError("No inverse for e.")
+    return (n, e), (n, d)
 
-def encrypt_int(m: int, pubkey: tuple[int, int]) -> int:
-    e, n = pubkey
-    require_int('m', m, 0)
-    if m >= n: raise ValueError("m < n required")
-    return pow(m, e, n)
+def encryptMessage(message, pub):
+    n, e = pub
+    return [pow(ord(ch), e, n) for ch in message]
 
-def decrypt_int(c: int, privkey: tuple[int, int]) -> int:
-    d, n = privkey
-    return pow(c, d, n)
+def decryptMessage(cipherBlocks, priv):
+    n, d = priv
+    return ''.join(chr(pow(c, d, n)) for c in cipherBlocks)
 
-if __name__ == "__main__":
-    m = 42
-    c = encrypt_int(m, PUBKEY)
-    pt = decrypt_int(c, PRIVKEY)
-    print(f"RSA: {m} → {c} → {pt}")
-
+# adapters
+def encrypt(text, pub): return encryptMessage(text, pub)
+def decrypt(blocks, priv): return decryptMessage(blocks, priv)
