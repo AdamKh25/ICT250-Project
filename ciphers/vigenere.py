@@ -1,29 +1,36 @@
-from validation import SYMBOLS
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-def encrypt(text: str, key: str) -> str:
+def encryptMessage(key, message):
     key = key.upper()
-    j = 0
-    out = []
-    for ch in text:
-        if ch.isalpha():
-            k = ord(key[j % len(key)]) - 65
-            j += 1
-            base = 65 if ch.isupper() else 97
-            out.append(chr((ord(ch) - base + k) % 26 + base))
+    translated = []
+    keyIndex = 0
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            num = LETTERS.find(symbol.upper())
+            k   = LETTERS.find(key[keyIndex])
+            num = (num + k) % 26
+            new = LETTERS[num]
+            translated.append(new if symbol.isupper() else new.lower())
+            keyIndex = (keyIndex + 1) % len(key)
         else:
-            out.append(ch if ch in SYMBOLS else ch)
-    return ''.join(out)
+            translated.append(symbol)
+    return ''.join(translated)
 
-def decrypt(text: str, key: str) -> str:
+def decryptMessage(key, message):
     key = key.upper()
-    j = 0
-    out = []
-    for ch in text:
-        if ch.isalpha():
-            k = ord(key[j % len(key)]) - 65
-            j += 1
-            base = 65 if ch.isupper() else 97
-            out.append(chr((ord(ch) - base - k) % 26 + base))
+    translated = []
+    keyIndex = 0
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            num = LETTERS.find(symbol.upper())
+            k   = LETTERS.find(key[keyIndex])
+            num = (num - k) % 26
+            new = LETTERS[num]
+            translated.append(new if symbol.isupper() else new.lower())
+            keyIndex = (keyIndex + 1) % len(key)
         else:
-            out.append(ch if ch in SYMBOLS else ch)
-    return ''.join(out)
+            translated.append(symbol)
+    return ''.join(translated)
+
+def encrypt(text, key): return encryptMessage(key, text)
+def decrypt(text, key): return decryptMessage(key, text)
