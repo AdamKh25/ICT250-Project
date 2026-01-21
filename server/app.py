@@ -1,74 +1,104 @@
+# server/app.py
 import os, sys
+# Ensure the project root (the folder that contains ciphers/, store/, web/, server/) is on sys.path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from store.codec import save_note, load_note, list_titles, search_by_tag, b64e, b64d
-from store.model import Note
-import datetime
+
+# Project imports (will work because of the sys.path append above)
+from ciphers import caesar, affine, vigenere, transposition
+from store.codec import save_note, load_note, list_titles, search_by_tag
 
 app = Flask(__name__)
 CORS(app)
 
-def ok(payload): return jsonify({"ok": True, **payload})
-def err(msg):    return jsonify({"ok": False, "error": msg}), 400
+@app.get("/api/health")
+def health():
+    return jsonify({"ok": True})
 
-@app.post("/api/note/save")
-def note_save():
+def _encrypt(cipher, text, params):
+    if cipher == "caesar":
+        key = int(params.get("key", 0))
+        return caesar.encrypt(text, key)
+    elif cipher == "vigenere":
+        key = str(params.get("key", ""))
+        return vigenere.encrypt(text, key)
+    elif cipher == "affine":
+        a = int(params.get("a", 1))
+        b = int(params.get("b", 0))
+        return affine.encrypt(text, a*26 + b)
+    elif cipher == "transposition":
+        key = int(params.get("key", 2))
+        return transposition.encrypt(text, key)
+    else:
+        raise ValueError("Unsupported cipher")
+
+def _decrypt(cipher, text, params):
+    if cipher == "caesar":
+        key = int(params.get("key", 0))
+        return caesar.decrypt(text, key)
+    elif cipher == "vigenere":
+        key = str(params.get("key", ""))
+        return vigenere.decrypt(text, key)
+    elif cipher == "affine":
+        a = int(params.get("a", 1))
+        b = int(params.get("b", 0))
+        return affine.decrypt(text, a*26 + b)
+    elif cipher == "transposition":
+        key = int(params.get("key", 2))
+        return transposition.decrypt(text, key)
+    else:
+        raise ValueError("Unsupported cipher")
+
+@app.post("/api/encrypt")
+def api_encrypt():
     data = request.get_json(force=True)
-    title  = str(data.get("title") or "").strip()
-    tags   = list(data.get("tags") or [])
-    cipher = str(data.get("cipher") or "")
-    params = dict(data.get("params") or {})
-    text   = str(data.get("plaintext") or "")
-
-    if not title or not cipher:
-        return err("title and cipher required")
-
-    # use your existing cipher modules
     try:
-        if cipher == "caesar":
-            from ciphers import caesar
-            ct = caesar.encrypt(text, int(params.get("key", 0)))
-        elif cipher == "vigenere":
-            from ciphers import vigenere
-            ct = vigenere.encrypt(text, str(params.get("key","")))
-        elif cipher == "affine":
-            from ciphers import affine
-            a = int(params.get("a", 5)); b = int(params.get("b", 8))
-            ct = affine.encrypt(text, (a*26 + b))
-        elif cipher == "transposition":
-            from ciphers import transposition
-            ct = transposition.encrypt(text, int(params.get("key", 4)))
-        else:
-            return err("unknown cipher")
+        ct = _encrypt(data["cipher"], data["text"], data.get("params", {}))
+        return jsonify({"ok": True, "ciphertext": ct})
     except Exception as e:
-        return err(f"encrypt failed: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 400
 
-    note = Note(
-        title=title,
-        tags=tags,
-        cipher=cipher,
-        params=params,
-        ciphertext_b64=b64e(ct),
-        created_at=datetime.datetime.utcnow().isoformat()+"Z"
-    )
-    save_note(note)
-    return ok({"saved": title})
+@app.post("/api/decrypt")
+def api_decrypt():
+    data = request.get_json(force=True)
+    try:
+        pt = _decrypt(data["cipher"], data["text"], data.get("params", {}))
+        return jsonify({"ok": True, "plaintext": pt})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
 
-@app.get("/api/note/open")
-def note_open():
-    title = request.args.get("title","")
-    n = load_note(title)
-    if not n: return err("not found")
-    return ok({"title": n.title, "tags": n.tags, "cipher": n.cipher,
-               "params": n.params, "ciphertext": b64d(n.ciphertext_b64),
-               "created_at": n.created_at})
+# --- Notes API (stored on disk) ---
+@app.post("/api/note/save")
+def api_note_save():
+    data = request.get_json(force=True)
+    title   = data["title"]
+    tags    = data.get("tags", [])
+    cipher  = data["cipher"]
+    params  = data.get("params", {})
+    plaintext = data["plaintext"]
+    ciphertext = _encrypt(cipher, plaintext, params)
+    save_note(title, tags, cipher, params, ciphertext)
+    return jsonify({"ok": True})
 
 @app.get("/api/note/list")
-def note_list():
-    return ok({"titles": list_titles()})
+def api_note_list():
+    return jsonify({"ok": True, "titles": list_titles()})
+
+@app.get("/api/note/open")
+def api_note_open():
+    title = request.args.get("title", "")
+    note = load_note(title)
+    if not note:
+        return jsonify({"ok": False, "error": "not found"}), 404
+    return jsonify({"ok": True, "note": note})
 
 @app.get("/api/note/search")
-def note_search():
-    tag = request.args.get("tag","")
-    return ok({"titles": search_by_tag(tag)})
+def api_note_search():
+    tag = request.args.get("tag", "")
+    return jsonify({"ok": True, "titles": search_by_tag(tag)})
+
+if __name__ == "__main__":
+    print("Starting server ...")
+    app.run(host="127.0.0.1", port=5000, debug=True)
