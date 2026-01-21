@@ -1,30 +1,24 @@
-LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 !?.'
 
 def encrypt(text: str, key: int) -> str:
-    text = text.upper()
-    result = ''
-
-    for symbol in text:
-        if symbol in LETTERS:
-            num = LETTERS.find(symbol)
-            num = (num + key) % len(LETTERS)
-            result += LETTERS[num]
+    result = []
+    for ch in text:
+        if ch in SYMBOLS:
+            idx = SYMBOLS.index(ch)
+            new_idx = (idx + key) % len(SYMBOLS)
+            result.append(SYMBOLS[new_idx])
         else:
-            # keep spaces, commas, etc.
-            result += symbol
-
-    return result
+            # if not in SYMBOLS, leave as-is (like slides often suggest)
+            result.append(ch)
+    return ''.join(result)
 
 def decrypt(text: str, key: int) -> str:
-    text = text.upper()
-    result = ''
-
-    for symbol in text:
-        if symbol in LETTERS:
-            num = LETTERS.find(symbol)
-            num = (num - key) % len(LETTERS)
-            result += LETTERS[num]
+    result = []
+    for ch in text:
+        if ch in SYMBOLS:
+            idx = SYMBOLS.index(ch)
+            new_idx = (idx - key) % len(SYMBOLS)
+            result.append(SYMBOLS[new_idx])
         else:
-            result += symbol
-
-    return result
+            result.append(ch)
+    return ''.join(result)
