@@ -1,3 +1,5 @@
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from store.codec import save_note, load_note, list_titles, search_by_tag, b64e, b64d
