@@ -98,8 +98,9 @@ def api_decrypt():
 # ---------- Hack: Caesar ----------
 @app.post("/api/hack/caesar")
 def api_hack_caesar():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True, silent=True) or {}
     ct = data.get("ciphertext") or data.get("text") or ""
+
 
     pt, key, candidates = caesar_hack.hack(ct)
 
@@ -113,8 +114,9 @@ def api_hack_caesar():
 # ---------- Hack: Affine ----------
 @app.post("/api/hack/affine")
 def api_hack_affine():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True, silent=True) or {}
     ct = data.get("ciphertext") or data.get("text") or ""
+
 
     pt, (a, b), candidates = affine_hack.hack(ct)
 
