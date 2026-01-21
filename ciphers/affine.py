@@ -1,58 +1,53 @@
-from validation import SYMBOLS
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+M = 26
 
-def _gcd(a: int, b: int) -> int:
+def gcd(a, b):
     while b:
         a, b = b, a % b
     return abs(a)
 
-def _modinv(a: int, m: int) -> int | None:
+def modInverse(a, m):
     a %= m
-    if _gcd(a, m) != 1:
-        return None
-    t, nt = 0, 1
-    r, nr = m, a
-    while nr:
-        q = r // nr
-        t, nt = nt, t - q * nt
-        r, nr = nr, r - q * nr
-    return t % m
+    for x in range(1, m):
+        if (a * x) % m == 1:
+            return x
+    return None
 
-def get_key_parts(key: int) -> tuple[int, int]:
-    a = key // 26
-    b = key % 26
-    return a, b
+def getKeyParts(key):
+    keyA = key // M
+    keyB = key % M
+    return keyA, keyB
 
-def encrypt(text: str, key: int) -> str:
-    a, b = get_key_parts(key)
-    if _gcd(a, 26) != 1:
-        raise ValueError("Invalid key: gcd(a,26) must be 1")
-    out = []
-    for ch in text:
-        if 'A' <= ch <= 'Z':
-            p = ord(ch) - 65
-            out.append(chr((a * p + b) % 26 + 65))
-        elif 'a' <= ch <= 'z':
-            p = ord(ch) - 97
-            out.append(chr((a * p + b) % 26 + 97))
+def encryptMessage(key, message):
+    keyA, keyB = getKeyParts(key)
+    if gcd(keyA, M) != 1:
+        raise ValueError('Key A and 26 are not relatively prime.')
+    translated = []
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            num = LETTERS.find(symbol.upper())
+            num = (keyA * num + keyB) % M
+            new = LETTERS[num]
+            translated.append(new if symbol.isupper() else new.lower())
         else:
-            out.append(ch if ch in SYMBOLS else ch)
-    return ''.join(out)
+            translated.append(symbol)
+    return ''.join(translated)
 
-def decrypt(text: str, key: int) -> str:
-    a, b = get_key_parts(key)
-    if _gcd(a, 26) != 1:
-        raise ValueError("Invalid key: gcd(a,26) must be 1")
-    inv = _modinv(a, 26)
-    if inv is None:
-        raise ValueError("Invalid key: no modular inverse for a")
-    out = []
-    for ch in text:
-        if 'A' <= ch <= 'Z':
-            c = ord(ch) - 65
-            out.append(chr((inv * (c - b)) % 26 + 65))
-        elif 'a' <= ch <= 'z':
-            c = ord(ch) - 97
-            out.append(chr((inv * (c - b)) % 26 + 97))
+def decryptMessage(key, message):
+    keyA, keyB = getKeyParts(key)
+    invA = modInverse(keyA, M)
+    if invA is None:
+        raise ValueError('Key A has no inverse mod 26.')
+    translated = []
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            num = LETTERS.find(symbol.upper())
+            num = (invA * (num - keyB)) % M
+            new = LETTERS[num]
+            translated.append(new if symbol.isupper() else new.lower())
         else:
-            out.append(ch if ch in SYMBOLS else ch)
-    return ''.join(out)
+            translated.append(symbol)
+    return ''.join(translated)
+
+def encrypt(text, key): return encryptMessage(key, text)
+def decrypt(text, key): return decryptMessage(key, text)
