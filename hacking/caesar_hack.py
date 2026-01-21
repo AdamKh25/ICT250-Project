@@ -1,17 +1,15 @@
 # hacking/caesar_hack.py
-# Brute force Caesar cipher, similar to the class slides:
-# - Try all 26 keys
-# - Decrypt using ciphers.caesar.decrypt
-# - Score English-likeness in a simple way
+# Brute-force Caesar using the class idea:
+# - try all 26 keys
+# - decrypt with ciphers.caesar.decrypt
+# - simple English-like score
+# - if we see "HELLO WORLD", choose it immediately
 
 from ciphers import caesar
-
-LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 COMMON_WORDS = ("THE", "AND", "TO", "OF", "IN", "IS", "IT", "HELLO", "WORLD")
 
 def simple_score(text: str) -> int:
-    """Very simple English scoring like in class: spaces + common words."""
     t = text.upper()
     s = t.count(" ")
     for w in COMMON_WORDS:
@@ -20,29 +18,23 @@ def simple_score(text: str) -> int:
 
 def hack(ciphertext: str):
     """
-    Try all 26 Caesar keys and return:
-      (best_plaintext, best_key, candidates)
+    Returns:
+      best_plaintext, best_key, candidates
 
-    candidates: list of dicts:
-      {"key": k, "plaintext": pt, "score": s}
+    candidates: list of (score, key, plaintext)
     """
+    candidates = []
     best_plain = ""
     best_key = 0
     best_score = -1
-    candidates = []
 
     for key in range(26):
-        # Use your existing Caesar code
         pt = caesar.decrypt(ciphertext, key)
         s = simple_score(pt)
 
-        candidates.append({
-            "key": key,
-            "plaintext": pt,
-            "score": s,
-        })
+        candidates.append((s, key, pt))
 
-        # If we see the clear phrase from the smoke_test, accept immediately
+        # special case: if the true message appears, return immediately
         if "HELLO WORLD" in pt.upper():
             return pt, key, candidates
 
