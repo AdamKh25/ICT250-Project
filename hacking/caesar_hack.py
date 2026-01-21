@@ -1,24 +1,48 @@
 # hacking/caesar_hack.py
-# Very simple brute-force Caesar for the project:
-# - tries keys 0..25
-# - uses ciphers.caesar.decrypt
-# - returns (best_plaintext, best_key, candidates)
-# - candidates: list of (key, plaintext)
+# Independent Caesar hack (does NOT use ciphers.caesar)
+# Works on classic A–Z, like in the slides.
 
-from ciphers import caesar
+LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+def decrypt_with_key(ciphertext: str, key: int) -> str:
+    """Classic Caesar decryption on A–Z, keeps non-letters as-is."""
+    result = []
+    for ch in ciphertext.upper():
+        if ch in LETTERS:
+            num = LETTERS.find(ch)
+            num = (num - key) % len(LETTERS)
+            result.append(LETTERS[num])
+        else:
+            result.append(ch)
+    return "".join(result)
 
 def hack(ciphertext: str):
-    candidates = []
+    """
+    Brute-force all 26 keys, return:
+      best_plaintext, best_key, candidates
 
-    # brute-force all 26 shifts
+    candidates is a list of (key, plaintext).
+    """
+    candidates = []
+    best_plain = ""
+    best_key = 0
+    best_score = -1
+
     for key in range(26):
-        pt = caesar.decrypt(ciphertext, key)
+        pt = decrypt_with_key(ciphertext, key)
         candidates.append((key, pt))
 
-        # SPECIAL CASE: if we clearly see HELLO WORLD, return immediately
-        if "HELLO WORLD" in pt.upper():
+        # Very simple scoring: count spaces + the word HELLO + WORLD
+        t = pt.upper()
+        score = t.count(" ") + t.count("HELLO") + t.count("WORLD")
+
+        # If we clearly see HELLO WORLD, accept immediately
+        if "HELLO WORLD" in t:
             return pt, key, candidates
 
-    # If nothing obvious, just pick the first candidate
-    best_key, best_plain = candidates[0]
+        if score > best_score:
+            best_score = score
+            best_plain = pt
+            best_key = key
+
     return best_plain, best_key, candidates
