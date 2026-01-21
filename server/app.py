@@ -77,3 +77,49 @@ def api_decrypt():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
+
+# --- Hack endpoints ---
+@app.post("/api/hack/caesar")
+def api_hack_caesar():
+    data = request.get_json(force=True)
+    ct = data.get("ciphertext", "")
+    from ciphers import caesar
+
+    candidates = []
+    for k in range(26):
+        pt = caesar.decrypt(ct, k)
+        candidates.append({"key": k, "plaintext": pt})
+
+    COMMON = (" THE ", " AND ", " TO ", " OF ", " IN ", " HELLO ", " WORLD ")
+    def score(s):
+        u = s.upper()
+        return u.count(" ") + sum(u.count(w) for w in COMMON)
+
+    best = max(candidates, key=lambda x: score(x["plaintext"]))
+    return jsonify({"ok": True, "best": best, "candidates": candidates})
+@app.post("/api/hack/affine")
+def api_hack_affine():
+    data = request.get_json(force=True)
+    ct = data.get("ciphertext", "")
+    from ciphers import affine
+    import math
+
+    M = 26
+    validA = [a for a in range(1, M, 2) if math.gcd(a, M) == 1]
+    candidates = []
+    for a in validA:
+        for b in range(M):
+            key = a*26 + b
+            try:
+                pt = affine.decrypt(ct, key)
+                candidates.append({"a": a, "b": b, "plaintext": pt})
+            except Exception:
+                pass
+
+    COMMON = (" THE ", " AND ", " TO ", " OF ", " IN ", " HELLO ", " WORLD ", " NAME ")
+    def score(s):
+        u = s.upper()
+        return u.count(" ") + sum(u.count(w) for w in COMMON)
+
+    best = max(candidates, key=lambda x: score(x["plaintext"])) if candidates else None
+    return jsonify({"ok": True, "best": best, "candidates": candidates})
