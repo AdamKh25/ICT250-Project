@@ -1,14 +1,14 @@
+# server/app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os, sys, math
+import os, sys
 
-# Make sure we can import ciphers and hacking
+# Make sure we can import from project root (ciphers/, hacking/, etc.)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from ciphers import caesar, vigenere, affine, transposition
-from hacking import caesar_hack, affine_hack
 
 app = Flask(__name__)
 CORS(app)
@@ -16,7 +16,7 @@ CORS(app)
 # ---------- Health ----------
 @app.get("/api/health")
 def api_health():
-    return jsonify({"ok": True, "service": "crypto_toolkit"})
+    return jsonify({"ok": True})
 
 # ---------- Encrypt ----------
 @app.post("/api/encrypt")
@@ -34,7 +34,8 @@ def api_encrypt():
             key = str(params.get("key", ""))
             ct  = vigenere.encrypt(text, key)
         elif cipher == "affine":
-            key = int(params.get("key"))   # a*26 + b style
+            # key is the packed a*26 + b like in your class code
+            key = int(params.get("key"))
             ct  = affine.encrypt(text, key)
         elif cipher == "transposition":
             key = int(params.get("key", 8))
@@ -73,33 +74,6 @@ def api_decrypt():
         return jsonify({"ok": True, "plaintext": pt})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
-
-# ---------- Hack: Caesar ----------
-@app.post("/api/hack/caesar")
-def api_hack_caesar():
-    data = request.get_json(force=True)
-    ct = data.get("ciphertext") or data.get("text") or ""
-    best_plain, key, candidates = caesar_hack.hack(ct)
-    return jsonify({
-        "ok": True,
-        "plaintext": best_plain,
-        "key": key,
-        "candidates": candidates[:10],
-    })
-
-# ---------- Hack: Affine ----------
-@app.post("/api/hack/affine")
-def api_hack_affine():
-    data = request.get_json(force=True)
-    ct = data.get("ciphertext") or data.get("text") or ""
-    best_plain, (a, b), candidates = affine_hack.hack(ct)
-    return jsonify({
-        "ok": True,
-        "plaintext": best_plain,
-        "a": a,
-        "b": b,
-        "candidates": candidates[:10],
-    })
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
