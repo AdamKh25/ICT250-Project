@@ -8,7 +8,6 @@ def encrypt(text: str, key: int) -> str:
             new_idx = (idx + key) % len(SYMBOLS)
             result.append(SYMBOLS[new_idx])
         else:
-            # if not in SYMBOLS, leave as-is (like slides often suggest)
             result.append(ch)
     return ''.join(result)
 
