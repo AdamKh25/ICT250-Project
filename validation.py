@@ -1,15 +1,8 @@
-SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 !?."
+# validation.py
+# Minimal helpers kept so older code/tests can still `import validation`.
 
-def require_text(x: str) -> str:
-    if not isinstance(x, str) or x == "":
-        raise ValueError("Text must be a non-empty string.")
-    return x
-
-def require_int(x) -> int:
-    try:
-        return int(x)
-    except Exception:
-        raise ValueError("Expected an integer.")
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+M = 26  # modulus for A–Z ciphers
 
 def gcd(a: int, b: int) -> int:
     while b:
@@ -18,18 +11,17 @@ def gcd(a: int, b: int) -> int:
 
 def mod_inverse(a: int, m: int) -> int | None:
     a %= m
-    if gcd(a, m) != 1:
-        return None
-    t, nt = 0, 1
-    r, nr = m, a
-    while nr:
-        q = r // nr
-        t, nt = nt, t - q * nt
-        r, nr = nr, r - q * nr
-    return t % m
+    for x in range(1, m):
+        if (a * x) % m == 1:
+            return x
+    return None
 
 def is_valid_affine_a(a: int) -> bool:
-    return gcd(a, 26) == 1
+    return gcd(a, M) == 1
 
 def make_affine_key(a: int, b: int) -> int:
-    return a * 26 + (b % 26)
+    # pack (a,b) into one integer key (used by some code paths)
+    return a * M + (b % M)
+
+def get_affine_parts(key: int) -> tuple[int, int]:
+    return key // M, key % M
