@@ -1,24 +1,37 @@
-from validation import require_text
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 !?.'
-UPPER = SYMBOLS[:26]
+def checkValidKey(key):
+    key = key.upper()
+    return len(key) == 26 and sorted(key) == sorted(LETTERS)
 
-def validate_key(key: str):
-    require_text('key', key)
-    if len(key) != 26 or len(set(key)) != 26 or not key.isupper():
-        raise ValueError("26 unique uppercase A-Z")
+def encryptMessage(key, message):
+    key = key.upper()
+    translated = []
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            idx = LETTERS.find(symbol.upper())
+            new = key[idx]
+            translated.append(new if symbol.isupper() else new.lower())
+        else:
+            translated.append(symbol)
+    return ''.join(translated)
 
-def encrypt(text: str, key: str) -> str:
-    validate_key(key)
-    mapping = str.maketrans(UPPER, key)
-    return text.translate(mapping)
+def decryptMessage(key, message):
+    key = key.upper()
+    translated = []
+    for symbol in message:
+        if symbol.upper() in LETTERS:
+            idx = key.find(symbol.upper())
+            new = LETTERS[idx]
+            translated.append(new if symbol.isupper() else new.lower())
+        else:
+            translated.append(symbol)
+    return ''.join(translated)
 
-def decrypt(ct: str, key: str) -> str:
-    validate_key(key)
-    inv = str.maketrans(key, UPPER)
-    return ct.translate(inv)
-
-if __name__ == "__main__":
-    key = "QWERTYUIOPASDFGHJKLZXCVBNM"
-    ct = encrypt("HELLO", key)
-    print(decrypt(ct, key) == "HELLO")
+# project adapters
+def encrypt(text, key): 
+    if not checkValidKey(key): raise ValueError("Invalid substitution key.")
+    return encryptMessage(key, text)
+def decrypt(text, key): 
+    if not checkValidKey(key): raise ValueError("Invalid substitution key.")
+    return decryptMessage(key, text)
