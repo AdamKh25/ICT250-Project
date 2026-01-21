@@ -1,28 +1,34 @@
-﻿import os
-from typing import List, Optional
-from .codec import load_note
-from .model import Note
+import os, json
+from typing import List, Dict, Any
+from store.model import Note
+from store.codec import dict_to_note
 
-def search_notes_by_tags(notes_dir: str, tags: List[str]) -> List[Note]:
-    tags_lower = [t.strip().lower() for t in tags if t.strip()]
-    if not tags_lower:
-        return []
+def _is_note_file(name: str) -> bool:
+    # We save notes as *.enc.json
+    return name.endswith(".enc.json")
 
-    results: List[Note] = []
-    if not os.path.isdir(notes_dir):
-        return results
+def search_by_tags(folder: str, required_tags: List[str]) -> List[Note]:
+    """
+    Return notes whose 'tags' contain ALL tags in required_tags.
+    """
+    required = [t.strip().lower() for t in required_tags if t.strip()]
+    found: List[Note] = []
 
-    for name in os.listdir(notes_dir):
-        if not name.endswith(".enc"):
+    if not os.path.isdir(folder):
+        return found
+
+    for name in os.listdir(folder):
+        if not _is_note_file(name):
             continue
-        path = os.path.join(notes_dir, name)
+        path = os.path.join(folder, name)
         try:
-            note = load_note(path)
-            note_tags = [t.lower() for t in (note.tags or [])]
-            if all(t in note_tags for t in tags_lower):
-                results.append(note)
+            with open(path, "r", encoding="utf-8") as f:
+                data: Dict[str, Any] = json.load(f)
+            tags = [str(t).lower() for t in data.get("tags", [])]
+            ok = all(t in tags for t in required)
+            if ok:
+                found.append(dict_to_note(data))
         except Exception:
+            # Skip broken files quietly (beginner-friendly)
             continue
-
-    return results
-
+    return found
