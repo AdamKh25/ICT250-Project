@@ -1,4 +1,3 @@
-# server/app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os, sys
@@ -31,31 +30,36 @@ def api_encrypt():
         if cipher == "caesar":
             key = int(params.get("key", 0))
             ct  = caesar.encrypt(text, key)
+
         elif cipher == "vigenere":
             key = str(params.get("key", ""))
             ct  = vigenere.encrypt(text, key)
+
         elif cipher == "affine":
-    a = params.get("a")
-    b = params.get("b")
+            a = params.get("a")
+            b = params.get("b")
 
-    if a is None or b is None:
-        raise ValueError("Affine cipher requires parameters 'a' and 'b'")
+            if a is None or b is None:
+                raise ValueError("Affine cipher requires parameters 'a' and 'b'")
 
-    a = int(a)
-    b = int(b)
+            a = int(a)
+            b = int(b)
 
-    key = a * 26 + (b % 26)
-    ct  = affine.encrypt(text, key)
+            key = a * 26 + (b % 26)
+            ct  = affine.encrypt(text, key)
 
         elif cipher == "transposition":
             key = int(params.get("key", 8))
             ct  = transposition.encrypt(text, key)
+
         else:
             return jsonify({"ok": False, "error": f"Unknown cipher '{cipher}'"}), 400
 
         return jsonify({"ok": True, "ciphertext": ct})
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
+
 
 # ---------- Decrypt ----------
 @app.post("/api/decrypt")
@@ -69,38 +73,42 @@ def api_decrypt():
         if cipher == "caesar":
             key = int(params.get("key", 0))
             pt  = caesar.decrypt(text, key)
+
         elif cipher == "vigenere":
             key = str(params.get("key", ""))
             pt  = vigenere.decrypt(text, key)
+
         elif cipher == "affine":
-    a = params.get("a")
-    b = params.get("b")
+            a = params.get("a")
+            b = params.get("b")
 
-    if a is None or b is None:
-        raise ValueError("Affine cipher requires parameters 'a' and 'b'")
+            if a is None or b is None:
+                raise ValueError("Affine cipher requires parameters 'a' and 'b'")
 
-    a = int(a)
-    b = int(b)
+            a = int(a)
+            b = int(b)
 
-    key = a * 26 + (b % 26)
-    pt  = affine.decrypt(text, key)
+            key = a * 26 + (b % 26)
+            pt  = affine.decrypt(text, key)
 
         elif cipher == "transposition":
             key = int(params.get("key", 8))
             pt  = transposition.decrypt(text, key)
+
         else:
             return jsonify({"ok": False, "error": f"Unknown cipher '{cipher}'"}), 400
 
         return jsonify({"ok": True, "plaintext": pt})
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 400
+
 
 # ---------- Hack: Caesar ----------
 @app.post("/api/hack/caesar")
 def api_hack_caesar():
     data = request.get_json(force=True, silent=True) or {}
     ct = data.get("ciphertext") or data.get("text") or ""
-
 
     pt, key, candidates = caesar_hack.hack(ct)
 
@@ -111,12 +119,12 @@ def api_hack_caesar():
         "candidates": candidates[:10],
     })
 
+
 # ---------- Hack: Affine ----------
 @app.post("/api/hack/affine")
 def api_hack_affine():
     data = request.get_json(force=True, silent=True) or {}
     ct = data.get("ciphertext") or data.get("text") or ""
-
 
     pt, (a, b), candidates = affine_hack.hack(ct)
 
@@ -127,6 +135,7 @@ def api_hack_affine():
         "b": b,
         "candidates": candidates[:10],
     })
+
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
